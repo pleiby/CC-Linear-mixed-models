@@ -9,6 +9,29 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+- What is mixed effects modelling and why does it matter?
+- Explore the data
+- Fit all data in one analysis
+- Run multiple analyses
+- Modify the current model
+- Mixed effects models
+  - Fixed and Random effects
+  - Let’s fit our first mixed model
+  - Types of random effects
+    - Crossed random effects
+    - Nested random effects
+    - Implicit vs. explicit nesting
+  - Our second mixed model
+  - Presenting your model results
+    - Tables
+    - Dot-and-Whisker plots
+    - Further processing
+  - EXTRA: P-values and model selection
+    - Fixed effects structure
+    - Random effects structure
+    - The entire model selection
+- THE END
+
 ## R Markdown
 
 ######################################
@@ -19,13 +42,50 @@ knitr::opts_chunk$set(echo = TRUE)
 
 - original authors: Gabriela K Hajduk, based on workshop developed by Liam Bailey
 - contact details: gkhajduk.github.io; email: gkhajduk@gmail.com
-- date: 2017-03-09 (see [Introduction to linear mixed models](https://ourcodingclub.github.io/2017/03/15/mixed-models.html))
+- date: 2017-03-09 
+
+see 
+- [Introduction to linear mixed models](https://ourcodingclub.github.io/2017/03/15/mixed-models.html) Created by Gabriela K Hajduk on March 15, 2017 & last updated by Sandra on September 10, 2019
+- [Introduction to linear mixed models
+Posted on March 9, 2017](https://gkhajduk.github.io/2017-03-09-mixed-models/)
 
 ## What is mixed effects modelling and why does it matter?
 
 Ecological and biological data are often complex and messy. We can have different `grouping factors` like populations, species, sites where we collect the data, etc. `Sample sizes` might leave something to be desired too, especially if we are trying to fit complicated models with many parameters. On top of that, our `data points might not be truly independent`. For instance, we might be using quadrats within our sites to collect the data (and so there is structure to our data: quadrats are nested within the sites).
 
 This is why `mixed models` were developed, to deal with such messy data and to allow us to use all our data, even when we have low sample sizes, structured data and many covariates to fit. Oh, and on top of all that, mixed models allow us to save degrees of freedom compared to running standard linear models!
+
+### Random Effects
+- [Random Effects Model Wikipedia](https://en.wikipedia.org/wiki/Random_effects_model)
+> Two common assumptions can be made about the individual-specific (panel group) effect: the random effects assumption and the fixed effects assumption. The random effects assumption is that the individual unobserved heterogeneity is uncorrelated with the independent variables. The fixed effect assumption is that the individual-specific effect is correlated with the independent variables.[5]
+...
+> In general, random effects are efficient, and should be used (over fixed effects) if the assumptions underlying them are believed to be satisfied. For random effects to work in the school (panel data) example it is necessary that the school-specific effects be uncorrelated to the other covariates of the model. This can be tested by running fixed effects, then random effects, and doing a `Hausman specification test`. If the test rejects, then random effects is biased and fixed effects is the correct estimation procedure.
+
+### Mixed Model
+- [Mixed model, Wikipedia](https://en.wikipedia.org/wiki/Mixed_model)
+> A mixed model (or more precisely mixed error-component model) is a statistical model containing both fixed effects and random effects.^[Baltagi, Badi H. (2008). Econometric Analysis of Panel Data (Fourth ed.). New York: Wiley. pp. 54–55. ISBN 978-0-470-51886-1.] ... They are particularly useful in settings where repeated measurements are made on the same statistical units (longitudinal study)
+
+A mixed model can be represented as
+
+$$\boldsymbol{y} = X \boldsymbol{\beta} + Z \boldsymbol{u} + \boldsymbol{\epsilon}$$
+where
+
+$\boldsymbol{y}$ is a known vector of observations, with mean $E(\boldsymbol{y}) = X \boldsymbol{\beta}$;
+
+${\boldsymbol {\beta }}$ is an unknown vector of fixed effects;
+
+$\boldsymbol{u}$ is an unknown vector of random effects, with mean $E(\boldsymbol{u}) = \boldsymbol{0}$ and variance–covariance matrix $\operatorname{var}(\boldsymbol{u}) = G$;
+
+$\boldsymbol{\epsilon}$ is an unknown vector of random errors, with mean $E(\boldsymbol{\epsilon}) = \boldsymbol{0}$ and variance $\operatorname{var}(\boldsymbol{\epsilon}) = R$;
+
+$Z$ are known design matrices relating the observations $\boldsymbol{y}$ to ${\boldsymbol {\beta }}$ and $\boldsymbol{u}$, respectively.
+
+
+maximizing the joint density over {\displaystyle {\boldsymbol {\beta }}}{\boldsymbol {\beta }} and {\displaystyle {\boldsymbol {u}}}\boldsymbol{u}, gives Henderson's "mixed model equations" (MME).
+
+When the conditional variance is known, then the inverse variance weighted least squares estimate is BLUE. However, the conditional variance is rarely, if ever, known. So it is desirable to jointly estimate the variance and weighted parameter estimates when solving MMEs.
+
+One method used to fit such mixed models is that of the Expectation Maximization (EM) algorithm where the variance components are treated as unobserved nuisance parameters in the joint likelihood.[10] Currently, this is the implemented method for the major statistical software packages R (lme in the nlme package, or lmer in the lme4 package), Python (statsmodels package), Julia (MixedModels.jl package), and SAS (proc mixed). The solution to the mixed model equations is a maximum likelihood estimate when the distribution of the errors is normal
 
 ## Explore the data 
 
@@ -41,7 +101,11 @@ head(dragons)
 
 ```
 
-## Let's say we want to know how the body length affects test scores.
+```{r}
+summary(dragons)
+```
+
+Let's say we want to know how the body length affects test scores.
 
 ## Have a look at the data distribution:
 
@@ -50,7 +114,7 @@ hist(dragons$testScore)  # seems close to normal distribution - good!
 
 ```
 
-## It is good practice to  standardise your explanatory variables before proceeding - you can use scale() to do that:
+## It is good practice to standardise your explanatory variables before proceeding - you can use scale() to do that:
 
 ```{r}
 dragons$bodyLength2 <- scale(dragons$bodyLength)
@@ -58,9 +122,9 @@ dragons$bodyLength2 <- scale(dragons$bodyLength)
 
 ## Back to our question: is test score affected by body length?
 
-###---- Fit all data in one analysis -----###
+## ---- Fit all data in one analysis -----
 
-## One way to analyse this data would be to try fitting a linear model to all our data, ignoring the sites and the mountain ranges for now.
+One way to analyse this data would be to try fitting a linear model to all our data, ignoring the sites and the mountain ranges for now.
 
 ```{r}
 library(lme4)
@@ -68,7 +132,6 @@ library(lme4)
 basic.lm <- lm(testScore ~ bodyLength2, data = dragons)
 
 summary(basic.lm)
-
 ```
 
 ## Let's plot the data with ggplot2
@@ -129,15 +192,13 @@ ggplot(dragons, aes(x = bodyLength, y = testScore, colour = mountainRange))+
 
 ## From the above plots it looks like our mountain ranges vary both in the dragon body length and in their test scores. This confirms that our observations from within each of the ranges aren't independent. We can't ignore that.
 
-## So what do we do?
+#### So what do we do?
 
-###----- Run multiple analyses -----###
+## ----- Run multiple analyses -----
 
+We could run many separate analyses and fit a regression for each of the mountain ranges.
 
-## We could run many separate analyses and fit a regression for each of the mountain ranges.
-
-## Lets have a quick look at the data split by mountain range
-## We use the facet_wrap to do that
+#### Quick look at the data split by mountain range (use the facet_wrap to do that)
 
 ```{r}
 ggplot(aes(bodyLength, testScore), data = dragons) + geom_point() +
@@ -147,31 +208,84 @@ ggplot(aes(bodyLength, testScore), data = dragons) + geom_point() +
 
 
 
-##----- Modify the model -----###
+## ----- Modify the model -----
 
-## We want to use all the data, but account for the data coming from different mountain ranges
+We want to use all the data, but account for the data coming from different mountain ranges
 
-## Add mountain range as a fixed effect to our basic.lm
+Add mountain range as a (second) fixed effect to our basic.lm.
+`mountainRange` is a factor, or categorical variable.
+
+```{r}
+table(dragons$mountainRange)
+```
+
+The R `lm` function automatically treats each factor value (save one, the first) as a separate dummy.
 
 ```{r}
 mountain.lm <- lm(testScore ~ bodyLength2 + mountainRange, data = dragons)
 summary(mountain.lm)
 ```
 
-## now body length is not significant
+#### Note that now body length is not significant
 
 
-###----- Mixed effects models -----###
+## ----- Mixed effects models -----
+
+### Discussion of model types
+
+#### Fixed and random effects
+Let’s talk a little about the difference between fixed and random effects first. It’s important to note that this difference has little to do with the variables themselves, and a lot to do with your research question! In many cases, the same variable could be considered either a random or a fixed effect (and sometimes even both at the same time!) so always refer to your questions and hypotheses to construct your models accordingly.
+
+Should my variables be fixed or random effects?
+
+In broad terms, fixed effects are variables that we expect will have an effect on the dependent/response variable: they’re what you call explanatory variables in a standard linear regression. In our case, we are interested in making conclusions about how dragon body length impacts the dragon’s test score. So body length is a fixed effect and test score is the dependent variable.
+
+On the other hand, random effects are usually grouping factors for which we are trying to control. They are always categorical, as you can’t force R to treat a continuous variable as a random effect.^[However, you can bin the values os a continuous variable and treat the bins as a factor variable. When is this sensible?] A lot of the time we are not specifically interested in their impact on the response variable, but we know that they might be influencing the patterns we see.
+
+Additionally, the data for our random effect is just a sample of all the possibilities: with unlimited time and funding we might have sampled every mountain where dragons live, every school in the country, every chocolate in the box), but we usually tend to generalise results to a whole population based on representative sampling. We don’t care about estimating how much better pupils in school A have done compared to pupils in school B, but we know that their respective teachers might be a reason why their scores would be different, and we’d like to know how much variation is attributable to this when we predict scores for pupils in school Z.
+
+In our particular case, we are looking to control for the effects of mountain range. We haven’t sampled all the mountain ranges in the world (we have eight) so our data are just a sample of all the existing mountain ranges. We are not really interested in the effect of each specific mountain range on the test score: we hope our model would also be generalisable to dragons from other mountain ranges! However, we know that the test scores from within the ranges might be correlated so we want to control for that.
+
+If we specifically chose eight particular mountain ranges a priori and we were interested in those ranges and wanted to make predictions about them, then mountain range would be fitted as a fixed effect.
+
+#### More about random effects
+Note that the **golden rule is that you generally want your random effect to have at least five levels.** So, for instance, if we wanted to control for the effects of dragon’s sex on intelligence, we would fit sex (a two level factor: male or female) as a fixed, not random, effect.
+
+This is, put simply, because estimating variance on few data points is very imprecise. Mathematically you could, but you wouldn’t have a lot of confidence in it. If you only have two or three levels, the model will struggle to partition the variance - it will give you an output, but not necessarily one you can trust.
+
+Finally, keep in mind that the name random doesn’t have much to do with mathematical randomness. Yes, it’s confusing. Just think about them as the grouping variables for now. Strictly speaking it’s all about making our models representative of our questions and getting better estimates. Hopefully, our next few examples will help you make sense of how and why they’re used.
+
+In the end, the big questions are: what are you trying to do? What are you trying to make predictions about? What is just variation (a.k.a “noise”) that you need to control for?
 
 
+## ---- First mixed model -----
 
-##----- First mixed model -----##
+Let’s fit our first mixed model
+Alright! Still with me? We have a response variable, the test score and we are attempting to explain part of the variation in test score through fitting body length as a fixed effect. But the response variable has some residual variation (i.e. unexplained variation) associated with mountain ranges. By using random effects, we are modeling that unexplained variation through variance.
 
 ### model
+We will fit the random effect usingv the syntax (`1|variableName`n in the call to `lme4::lmer`):
+
+```{r}
+mixed.lmer <- lmer(testScore ~ bodyLength2 + (1|mountainRange), data = dragons)
+summary(mixed.lmer)
+```
+
+xxx
+
+Once we account for the mountain ranges, it’s obvious that dragon body length doesn’t actually explain the differences in the test scores. _How is it obvious? _ I hear you say?
+
+Take a look at the summary output: notice how the model estimate is smaller than its associated error? That means that the effect, or slope, cannot be distinguised from zero.
 
 ### plots
+```{r}
+
+```
 
 ### summary
+```{r}
+
+```
 
 ### variance accounted for by mountain ranges
 
