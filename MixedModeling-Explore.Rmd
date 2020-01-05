@@ -264,34 +264,45 @@ Let’s fit our first mixed model
 Alright! Still with me? We have a response variable, the test score and we are attempting to explain part of the variation in test score through fitting body length as a fixed effect. But the response variable has some residual variation (i.e. unexplained variation) associated with mountain ranges. By using random effects, we are modeling that unexplained variation through variance.
 
 ### model
-We will fit the random effect usingv the syntax (`1|variableName`n in the call to `lme4::lmer`):
+We will fit the random effect usingv the syntax `1|variableName`n in the call to `lme4::lmer`:
 
 ```{r}
 mixed.lmer <- lmer(testScore ~ bodyLength2 + (1|mountainRange), data = dragons)
 summary(mixed.lmer)
 ```
 
-xxx
-
-Once we account for the mountain ranges, it’s obvious that dragon body length doesn’t actually explain the differences in the test scores. _How is it obvious? _ I hear you say?
-
-Take a look at the summary output: notice how the model estimate is smaller than its associated error? That means that the effect, or slope, cannot be distinguised from zero.
+Once we account for the mountain ranges, it’s obvious that dragon body length doesn’t actually explain the differences in the test scores. In the summary, the estimated coefficient for bodyLength2 is not statistically different from zero.
 
 ### plots
-```{r}
 
+As always, it’s good practice to have a look at the plots to check our assumptions:
+
+PLot the residuals
+
+```{r}
+plot(mixed.lmer)  # looks alright, no paterns evident
+```
+
+and “qqplot”:
+
+```{r}
+qqnorm(resid(mixed.lmer))
+qqline(resid(mixed.lmer))  # points fall nicely onto the line - good!
 ```
 
 ### summary
 ```{r}
-
+str(mixed.lmer)
 ```
 
 ### variance accounted for by mountain ranges
 
+We can see the variance for the mountainRange = 339.7. Mountain ranges are clearly important - they explain a lot of variation. How do we know that? We can take the variance for the mountainRange and divide it by the total variance:
 
+339.7/(339.7 + 223.8)  # ~60 %
+So the differences between mountain ranges explain ~60% of the variance. Do keep in mind that’s 60% of variance “left over” after the variance explained by our fixed effects.
 
-##-- implicit vs explicit nesting --##
+## --- implicit vs explicit nesting ---
 
 head(dragons)  # we have site and mountainRange
 str(dragons)  # we took samples from three sites per mountain range and eight mountain ranges in total
@@ -299,7 +310,7 @@ str(dragons)  # we took samples from three sites per mountain range and eight mo
 ### create new "sample" variable
 
 
-##----- Second mixed model -----##
+## --- Second mixed model ---
 
 ### model
 
@@ -309,7 +320,7 @@ str(dragons)  # we took samples from three sites per mountain range and eight mo
 
 
 
-##----- Model selection for the keen -----##
+## --- Model selection for the keen ---
 
 ### full model
 
